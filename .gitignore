@@ -5,3 +5,45 @@
 .DS_Store
 /build
 /captures
+
+/SystemAPKs/JellyBean_partitions
+
+com_crashlytics_export_strings.xml
+crashlytics-build.properties
+crashlytics.properties
+
+.gradle
+
+# Eclipse
+.classpath 
+.project 
+.settings
+
+# IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+gen/
+out/
+build/
+
+# Maven
+target/
+
+# Android Studio
+local.properties
+
+# Mac
+.DS_Store
+
+# Private key credentials
+keys/
+keystore.properties
+
+# App db
+director.db
+
+spoon-output
+

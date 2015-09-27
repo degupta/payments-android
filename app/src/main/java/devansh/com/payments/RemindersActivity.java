@@ -110,7 +110,7 @@ public class RemindersActivity extends Activity {
     }
 
     private void sendMessages() {
-        
+
     }
 
     private void fetchReminders() {

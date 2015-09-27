@@ -19,7 +19,3 @@ allprojects {
         jcenter()
     }
 }
-
-dependencies {
-    compile 'com.mcxiaoke.volley:library:1.0.+'
-}
