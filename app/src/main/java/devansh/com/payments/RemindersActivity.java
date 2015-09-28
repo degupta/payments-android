@@ -10,10 +10,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.volley.AuthFailureError;
+import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonArrayRequest;
+import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 
 import org.json.JSONArray;
@@ -21,6 +23,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
 
@@ -40,7 +43,7 @@ public class RemindersActivity extends Activity {
     private RemindersAdapter mAdapter;
 
     public static class Reminder {
-
+        public long id;
         public String party;
         public String partyNumber;
         public String broker;
@@ -57,6 +60,7 @@ public class RemindersActivity extends Activity {
                 return;
             }
 
+            id = jsonObject.optLong("id");
             party = jsonObject.optString("party");
             partyNumber = jsonObject.optString("party_number");
             broker = jsonObject.optString("broker");
@@ -114,6 +118,38 @@ public class RemindersActivity extends Activity {
 
     private void sendMessages() {
 
+    }
+
+    private void onMessageSent(long id) {
+        Calendar c = Calendar.getInstance();
+        int day = c.get(Calendar.DAY_OF_MONTH);
+        int month = c.get(Calendar.MONTH);
+        int year = c.get(Calendar.YEAR);
+        String date = day + "-" + month + "-" + year;
+
+        JSONObject object = new JSONObject();
+        try {
+            object.put("date", date);
+        } catch (JSONException e) {
+        }
+
+        JsonObjectRequest req = new JsonObjectRequest(Request.Method.POST,
+                Constants.COMPANIES + "/" + mCompanyId + Constants.REMINDERS + "/" + id +
+                        Constants.SENT_MESSAGE, object,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Toast.makeText(RemindersActivity.this, error.getMessage(), Toast.LENGTH_SHORT)
+                        .show();
+            }
+        });
+
+        mRequestQueue.add(req);
     }
 
     private void fetchReminders() {
