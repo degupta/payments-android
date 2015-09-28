@@ -60,13 +60,13 @@ public class RemindersActivity extends Activity {
             party = jsonObject.optString("party");
             partyNumber = jsonObject.optString("party_number");
             broker = jsonObject.optString("broker");
-            brokerNumber = jsonObject.optString("brokerNumber");
-            billDate = jsonObject.optString("billDate");
-            billNo = jsonObject.optString("billNo");
+            brokerNumber = jsonObject.optString("broker_number");
+            billDate = jsonObject.optString("bill_date");
+            billNo = jsonObject.optString("bill_no");
             amount = jsonObject.optString("amount");
-            dueDate = jsonObject.optString("dueDate");
+            dueDate = jsonObject.optString("due_date");
             repeat = jsonObject.optInt("repeat");
-            lastMessage = jsonObject.optString("lastMessage");
+            lastMessage = jsonObject.optString("last_message");
         }
     }
 
@@ -79,8 +79,10 @@ public class RemindersActivity extends Activity {
             return;
         }
 
+        setContentView(R.layout.activity_reminders);
+
         mRequestQueue = Volley.newRequestQueue(this);
-        mListView = (ListView) findViewById(R.id.companies);
+        mListView = (ListView) findViewById(R.id.reminders);
         mAdapter = new RemindersAdapter();
         mListView.setAdapter(mAdapter);
 
