@@ -9,4 +9,6 @@ public class Constants {
     public static final String LOGIN = HOST + "/login";
     public static final String COMPANIES = HOST + "/companies";
     public static final String PENDING_MESSAGES = "/pending_reminders";
+
+    public static final long DAY_IN_MILLIS = (24 * 60 * 60 * 1000);
 }

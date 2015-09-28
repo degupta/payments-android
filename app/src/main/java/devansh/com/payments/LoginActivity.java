@@ -1,12 +1,13 @@
 package devansh.com.payments;
 
+import android.app.Activity;
 import android.content.Intent;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.AuthFailureError;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
@@ -15,7 +16,9 @@ import com.android.volley.toolbox.Volley;
 
 import org.json.JSONObject;
 
-public class LoginActivity extends AppCompatActivity {
+import java.util.Map;
+
+public class LoginActivity extends Activity {
 
     private RequestQueue mRequestQueue;
     private JsonObjectRequest mCurrentReq;
@@ -23,6 +26,13 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        if (UserManager.getInstance().isLoggedIn()) {
+            startActivity(new Intent(LoginActivity.this, CompaniesActivity.class));
+            finish();
+            return;
+        }
+
         setContentView(R.layout.activity_login);
 
         final TextView email = (TextView) findViewById(R.id.email);
@@ -62,6 +72,7 @@ public class LoginActivity extends AppCompatActivity {
                             Toast.makeText(LoginActivity.this, "Internal error, please try again",
                                     Toast.LENGTH_SHORT).show();
                         } else {
+                            UserManager.getInstance().setAuthResult(response);
                             startActivity(new Intent(LoginActivity.this, CompaniesActivity.class));
                             finish();
                         }
@@ -74,7 +85,13 @@ public class LoginActivity extends AppCompatActivity {
                 Toast.makeText(LoginActivity.this, error.getMessage(), Toast.LENGTH_SHORT)
                         .show();
             }
-        });
+        }) {
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                return Utils.getHeaders();
+            }
+
+        };
 
         mRequestQueue.add(mCurrentReq);
     }

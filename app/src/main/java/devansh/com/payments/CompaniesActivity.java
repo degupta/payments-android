@@ -24,6 +24,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by devansh on 9/6/15.
@@ -108,14 +109,13 @@ public class CompaniesActivity extends Activity {
                         Toast.makeText(CompaniesActivity.this, error.getMessage(),
                                 Toast.LENGTH_SHORT).show();
                     }
-                });
+                }) {
+                    @Override
+                    public Map<String, String> getHeaders() throws AuthFailureError {
+                        return Utils.getHeaders();
+                    }
 
-        try {
-            mCurrentRequest.getHeaders()
-                    .put("Authorization", "Token " + UserManager.getInstance().getAuthToken());
-        } catch (AuthFailureError error) {
-            Toast.makeText(CompaniesActivity.this, error.getMessage(), Toast.LENGTH_SHORT).show();
-        }
+                };
 
         mRequestQueue.add(mCurrentRequest);
     }
