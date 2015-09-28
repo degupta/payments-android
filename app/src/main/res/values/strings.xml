@@ -9,4 +9,6 @@
     <string name="login">Login</string>
     <string name="refresh">Refresh</string>
     <string name="send_messages">Send Messages</string>
+    <string name="sent">Status: sent</string>
+    <string name="not_sent">Status: not sent</string>
 </resources>

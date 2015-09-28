@@ -55,6 +55,8 @@ public class RemindersActivity extends Activity {
         public int repeat;
         public String lastMessage;
 
+        public boolean messageSent;
+
         public Reminder(JSONObject jsonObject) {
             if (jsonObject == null) {
                 return;
@@ -120,7 +122,7 @@ public class RemindersActivity extends Activity {
 
     }
 
-    private void onMessageSent(long id) {
+    private void onMessageSent(final long id) {
         Calendar c = Calendar.getInstance();
         int day = c.get(Calendar.DAY_OF_MONTH);
         int month = c.get(Calendar.MONTH);
@@ -139,7 +141,7 @@ public class RemindersActivity extends Activity {
                 new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
-
+                        mAdapter.notifySent(id);
                     }
                 }, new Response.ErrorListener() {
             @Override
@@ -208,6 +210,17 @@ public class RemindersActivity extends Activity {
             notifyDataSetChanged();
         }
 
+        public void notifySent(long id) {
+            for (Reminder r : mReminders) {
+                if (r.id == id) {
+                    r.messageSent = true;
+                    break;
+                }
+            }
+
+            notifyDataSetChanged();
+        }
+
         @Override
         public int getCount() {
             return mReminders.size();
@@ -235,6 +248,15 @@ public class RemindersActivity extends Activity {
             ((TextView) convertView.findViewById(R.id.amount)).setText(r.amount);
             ((TextView) convertView.findViewById(R.id.dueDate)).setText(r.dueDate);
 
+            TextView status = ((TextView) convertView.findViewById(R.id.status));
+            if (r.messageSent) {
+                status.setText(R.string.sent);
+                status.setTextColor(getResources().getColor(android.R.color.holo_green_light));
+            } else {
+                status.setText(R.string.not_sent);
+                status.setTextColor(getResources().getColor(android.R.color.holo_red_light));
+
+            }
             return convertView;
         }
     }
