@@ -1,7 +1,13 @@
 package devansh.com.payments;
 
 import android.app.Activity;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
+import android.telephony.SmsManager;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
@@ -23,6 +29,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
@@ -41,8 +48,10 @@ public class RemindersActivity extends Activity {
     private String mCompanyName;
     private ListView mListView;
     private RemindersAdapter mAdapter;
+    private Reminder mCurrentReminder = null;
+    private boolean mSentParty = false;
 
-    public static class Reminder {
+    public class Reminder {
         public long id;
         public String party;
         public String partyNumber;
@@ -56,6 +65,7 @@ public class RemindersActivity extends Activity {
         public String lastMessage;
 
         public boolean messageSent;
+        public boolean messageError;
 
         public Reminder(JSONObject jsonObject) {
             if (jsonObject == null) {
@@ -73,6 +83,17 @@ public class RemindersActivity extends Activity {
             dueDate = jsonObject.optString("due_date");
             repeat = jsonObject.optInt("repeat");
             lastMessage = jsonObject.optString("last_message");
+        }
+
+
+        public String toPartySmsString() {
+            return "This is reminder from " + mCompanyName + ". Bill no: " + billNo +
+                    " for amount: " + amount + " is due on: " + dueDate;
+        }
+
+        public String toBrokerSmsString() {
+            return "This is reminder from " + mCompanyName + ". Bill no: " + billNo +
+                    " for amount: " + amount + " for party: " + party + " is due on: " + dueDate;
         }
     }
 
@@ -111,18 +132,77 @@ public class RemindersActivity extends Activity {
         findViewById(R.id.sendMessages).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                sendMessages();
+                resetAndSendMessages(false);
             }
         });
-
         fetchReminders();
+
+        registerReceiver(new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                switch (getResultCode()) {
+                    case Activity.RESULT_OK:
+                        if (mSentParty) {
+                            onMessageSent();
+                        } else {
+                            mSentParty = true;
+                            sendBroker();
+                        }
+                        break;
+
+                    default:
+                        resetAndSendMessages(true);
+                        break;
+                }
+            }
+        }, new IntentFilter("SMS_DELIVERED"));
     }
 
-    private void sendMessages() {
-
+    private void resetAndSendMessages(boolean error) {
+        if (error && mCurrentReminder != null) {
+            mCurrentReminder.messageError = true;
+        }
+        mCurrentReminder = null;
+        mSentParty = false;
+        sendMessage(mAdapter.getNextReminder());
+        mAdapter.notifyDataSetChanged();
     }
 
-    private void onMessageSent(final long id) {
+    private void sendMessage(Reminder r) {
+        if (r == null || mCurrentReminder != null) {
+            return;
+        }
+
+        mCurrentReminder = r;
+        mSentParty = false;
+
+        PendingIntent deliveredPI =
+                PendingIntent.getBroadcast(this, 0, new Intent("SMS_DELIVERED"), 0);
+        SmsManager smsManager = SmsManager.getDefault();
+        ArrayList<String> parts = smsManager.divideMessage(r.toPartySmsString());
+        smsManager.sendMultipartTextMessage(r.partyNumber, null, parts, null,
+                new ArrayList<>(Arrays.asList(deliveredPI)));
+    }
+
+    private void sendBroker() {
+        if (mCurrentReminder == null) {
+            return;
+        }
+
+        PendingIntent deliveredPI =
+                PendingIntent.getBroadcast(this, 0, new Intent("SMS_DELIVERED"), 0);
+        SmsManager smsManager = SmsManager.getDefault();
+        ArrayList<String> parts = smsManager.divideMessage(mCurrentReminder.toBrokerSmsString());
+        smsManager.sendMultipartTextMessage(mCurrentReminder.brokerNumber, null, parts, null,
+                new ArrayList<>(Arrays.asList(deliveredPI)));
+    }
+
+    private void onMessageSent() {
+        if (mCurrentReminder == null) {
+            resetAndSendMessages(false);
+            return;
+        }
+
         Calendar c = Calendar.getInstance();
         int day = c.get(Calendar.DAY_OF_MONTH);
         int month = c.get(Calendar.MONTH);
@@ -136,18 +216,20 @@ public class RemindersActivity extends Activity {
         }
 
         JsonObjectRequest req = new JsonObjectRequest(Request.Method.POST,
-                Constants.COMPANIES + "/" + mCompanyId + Constants.REMINDERS + "/" + id +
-                        Constants.SENT_MESSAGE, object,
+                Constants.COMPANIES + "/" + mCompanyId + Constants.REMINDERS + "/" +
+                        mCurrentReminder.id + Constants.SENT_MESSAGE, object,
                 new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
-                        mAdapter.notifySent(id);
+                        mCurrentReminder.messageSent = true;
+                        resetAndSendMessages(false);
                     }
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
                 Toast.makeText(RemindersActivity.this, error.getMessage(), Toast.LENGTH_SHORT)
                         .show();
+                resetAndSendMessages(true);
             }
         });
 
@@ -210,15 +292,13 @@ public class RemindersActivity extends Activity {
             notifyDataSetChanged();
         }
 
-        public void notifySent(long id) {
+        public Reminder getNextReminder() {
             for (Reminder r : mReminders) {
-                if (r.id == id) {
-                    r.messageSent = true;
-                    break;
+                if (!r.messageSent && !r.messageError) {
+                    return r;
                 }
             }
-
-            notifyDataSetChanged();
+            return null;
         }
 
         @Override
@@ -249,12 +329,15 @@ public class RemindersActivity extends Activity {
             ((TextView) convertView.findViewById(R.id.dueDate)).setText(r.dueDate);
 
             TextView status = ((TextView) convertView.findViewById(R.id.status));
-            if (r.messageSent) {
+            if (r.messageError) {
+                status.setText(R.string.sent);
+                status.setTextColor(getResources().getColor(android.R.color.holo_red_light));
+            } else if (r.messageSent) {
                 status.setText(R.string.sent);
                 status.setTextColor(getResources().getColor(android.R.color.holo_green_light));
             } else {
                 status.setText(R.string.not_sent);
-                status.setTextColor(getResources().getColor(android.R.color.holo_red_light));
+                status.setTextColor(getResources().getColor(android.R.color.holo_orange_light));
 
             }
             return convertView;
